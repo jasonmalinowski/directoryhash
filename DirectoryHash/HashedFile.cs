@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Threading;
+using System.Xml;
 
 namespace DirectoryHash
 {
@@ -73,5 +74,23 @@ namespace DirectoryHash
 
         public ImmutableArray<byte> Sha1Hash { get { return _sha1Hash; } }
         public ImmutableArray<byte> Sha256Hash { get { return _sha256Hash; } }
+
+        public void WriteTo(XmlWriter writer, string fileName)
+        {
+            writer.WriteStartElement("file");
+            writer.WriteAttributeString("name", fileName);
+
+            writer.WriteStartElement("hash");
+            writer.WriteAttributeString("algorithm", "sha1");
+            writer.WriteValue(Sha1Hash.ToHexString());
+            writer.WriteEndElement();
+
+            writer.WriteStartElement("hash");
+            writer.WriteAttributeString("algorithm", "sha256");
+            writer.WriteValue(Sha256Hash.ToHexString());
+            writer.WriteEndElement();
+
+            writer.WriteEndElement();
+        }
     }
 }
