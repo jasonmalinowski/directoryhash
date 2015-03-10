@@ -46,13 +46,13 @@ namespace DirectoryHash
             }
         }
 
-        public void RefreshFrom(DirectoryInfo directory, Predicate<FileInfo> shouldReprocessFile)
+        public void RefreshFrom(DirectoryInfo directory, Predicate<FileSystemInfo> shouldInclude, Predicate<FileInfo> shouldReprocessFile)
         {
-            RefreshChildDirectoriesFrom(directory, shouldReprocessFile);
-            RefreshChildFilesFrom(directory, shouldReprocessFile);
+            RefreshChildDirectoriesFrom(directory, shouldInclude, shouldReprocessFile);
+            RefreshChildFilesFrom(directory, shouldInclude, shouldReprocessFile);
         }
 
-        private void RefreshChildDirectoriesFrom(DirectoryInfo directory, Predicate<FileInfo> shouldReprocessFile)
+        private void RefreshChildDirectoriesFrom(DirectoryInfo directory, Predicate<FileSystemInfo> shouldInclude, Predicate<FileInfo> shouldReprocessFile)
         {
             // We'll remove directories we traverse from this HashSet, and whatever is left over
             // we can prune. It's intentionally case-sensitive as to reprocess any directories
@@ -61,16 +61,19 @@ namespace DirectoryHash
 
             foreach (var childDirectory in directory.GetDirectories())
             {
-                HashedDirectory hashedChildDirectory;
-
-                if (!_directories.TryGetValue(childDirectory.Name, out hashedChildDirectory))
+                if (shouldInclude(childDirectory))
                 {
-                    hashedChildDirectory = new HashedDirectory();
-                    _directories.Add(childDirectory.Name, hashedChildDirectory);
-                }
+                    HashedDirectory hashedChildDirectory;
 
-                unvisitedDirectories.Remove(childDirectory.Name);
-                hashedChildDirectory.RefreshFrom(childDirectory, shouldReprocessFile);
+                    if (!_directories.TryGetValue(childDirectory.Name, out hashedChildDirectory))
+                    {
+                        hashedChildDirectory = new HashedDirectory();
+                        _directories.Add(childDirectory.Name, hashedChildDirectory);
+                    }
+
+                    unvisitedDirectories.Remove(childDirectory.Name);
+                    hashedChildDirectory.RefreshFrom(childDirectory, shouldInclude, shouldReprocessFile);
+                }
             }
 
             foreach (var unvisitedDirectory in unvisitedDirectories)
@@ -79,7 +82,7 @@ namespace DirectoryHash
             }
         }
 
-        private void RefreshChildFilesFrom(DirectoryInfo directory, Predicate<FileInfo> shouldReprocessFile)
+        private void RefreshChildFilesFrom(DirectoryInfo directory, Predicate<FileSystemInfo> shouldInclude, Predicate<FileInfo> shouldReprocessFile)
         {
             // We'll remove files we process from this HashSet, and whatever is left over
             // we can prune. It's intentionally case-sensitive as to reprocess any directories
@@ -88,22 +91,25 @@ namespace DirectoryHash
 
             foreach (var file in directory.GetFiles())
             {
-                HashedFile hashedFile;
+                if (shouldInclude(file))
+                {
+                    HashedFile hashedFile;
 
-                if (!_files.TryGetValue(file.Name, out hashedFile))
-                {
-                    _files.Add(file.Name, HashedFile.FromFile(file));
-                }
-                else
-                {
-                    // We already have data for it. But we'll only recompute it if needed.
-                    if (shouldReprocessFile(file))
+                    if (!_files.TryGetValue(file.Name, out hashedFile))
                     {
-                        _files[file.Name] = HashedFile.FromFile(file);
+                        _files.Add(file.Name, HashedFile.FromFile(file));
                     }
-                }
+                    else
+                    {
+                        // We already have data for it. But we'll only recompute it if needed.
+                        if (shouldReprocessFile(file))
+                        {
+                            _files[file.Name] = HashedFile.FromFile(file);
+                        }
+                    }
 
-                unvisitedFiles.Remove(file.Name);
+                    unvisitedFiles.Remove(file.Name);
+                }
             }
 
             foreach (var unvisitedFile in unvisitedFiles)

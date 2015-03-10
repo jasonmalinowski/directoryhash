@@ -42,11 +42,17 @@ namespace DirectoryHash
             var directory = new HashedDirectory();
             var updatedTime = DateTime.UtcNow;
 
-            directory.RefreshFrom(new DirectoryInfo(Environment.CurrentDirectory), shouldReprocessFile: file => true);
+            var directoryToHash = new DirectoryInfo(Environment.CurrentDirectory);
+            var outputFile = new FileInfo(Path.Combine(directoryToHash.FullName, "Hashes.xml"));
+            
+            directory.RefreshFrom(
+                directoryToHash, 
+                shouldInclude: info => !info.IsHiddenAndSystem() && info.FullName != outputFile.FullName,
+                shouldReprocessFile: file => true);
 
             var writerSettings = new XmlWriterSettings { Indent = true };
 
-            using (var xmlWriter = XmlWriter.Create(Path.Combine(Environment.CurrentDirectory, "Hashes.xml"), writerSettings))
+            using (var xmlWriter = XmlWriter.Create(outputFile.FullName, writerSettings))
             {
                 xmlWriter.WriteStartElement("hashes");
                 xmlWriter.WriteAttributeString("updateTime", updatedTime.ToString("O"));
