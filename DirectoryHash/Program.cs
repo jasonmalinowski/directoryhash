@@ -48,7 +48,8 @@ namespace DirectoryHash
             directory.RefreshFrom(
                 directoryToHash, 
                 shouldInclude: info => !info.IsHiddenAndSystem() && info.FullName != outputFile.FullName,
-                shouldReprocessFile: file => true);
+                shouldReprocessFile: file => true,
+                reportDirectory: d => Console.WriteLine("Recomputing hashes of " + d.FullName + "..."));
 
             var writerSettings = new XmlWriterSettings { Indent = true };
 

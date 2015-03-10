@@ -46,20 +46,22 @@ namespace DirectoryHash
             }
         }
 
-        public void RefreshFrom(DirectoryInfo directory, Predicate<FileSystemInfo> shouldInclude, Predicate<FileInfo> shouldReprocessFile)
+        public void RefreshFrom(DirectoryInfo directory, Predicate<FileSystemInfo> shouldInclude, Predicate<FileInfo> shouldReprocessFile, Action<DirectoryInfo> reportDirectory)
         {
-            RefreshChildDirectoriesFrom(directory, shouldInclude, shouldReprocessFile);
+            reportDirectory(directory);
+
             RefreshChildFilesFrom(directory, shouldInclude, shouldReprocessFile);
+            RefreshChildDirectoriesFrom(directory, shouldInclude, shouldReprocessFile, reportDirectory);
         }
 
-        private void RefreshChildDirectoriesFrom(DirectoryInfo directory, Predicate<FileSystemInfo> shouldInclude, Predicate<FileInfo> shouldReprocessFile)
+        private void RefreshChildDirectoriesFrom(DirectoryInfo directory, Predicate<FileSystemInfo> shouldInclude, Predicate<FileInfo> shouldReprocessFile, Action<DirectoryInfo> reportDirectory)
         {
             // We'll remove directories we traverse from this HashSet, and whatever is left over
             // we can prune. It's intentionally case-sensitive as to reprocess any directories
             // whose name changes case.
             var unvisitedDirectories = new HashSet<string>(_directories.Keys, StringComparer.Ordinal);
 
-            foreach (var childDirectory in directory.GetDirectories())
+            foreach (var childDirectory in directory.GetDirectories().OrderBy(d => d.Name))
             {
                 if (shouldInclude(childDirectory))
                 {
@@ -72,7 +74,7 @@ namespace DirectoryHash
                     }
 
                     unvisitedDirectories.Remove(childDirectory.Name);
-                    hashedChildDirectory.RefreshFrom(childDirectory, shouldInclude, shouldReprocessFile);
+                    hashedChildDirectory.RefreshFrom(childDirectory, shouldInclude, shouldReprocessFile, reportDirectory);
                 }
             }
 
