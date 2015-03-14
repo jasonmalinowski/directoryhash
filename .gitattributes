@@ -1,1 +1,2 @@
 * text=auto encoding=utf-8
+*.cs diff=csharp text
