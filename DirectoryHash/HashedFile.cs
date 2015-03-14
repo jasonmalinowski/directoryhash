@@ -16,20 +16,14 @@ namespace DirectoryHash
     {
         private readonly ImmutableArray<byte> _sha1Hash;
         private readonly ImmutableArray<byte> _sha256Hash;
-        private readonly long _fileSize;
-        private readonly DateTime _fileCreatedUtc;
-        private readonly DateTime _fileModifiedUtc;
 
-        public HashedFile(ImmutableArray<byte> sha1Hash, ImmutableArray<byte> sha256Hash, long fileSize, DateTime fileCreatedUtc, DateTime fileModifiedUtc)
+        public HashedFile(ImmutableArray<byte> sha1Hash, ImmutableArray<byte> sha256Hash)
         {
             Debug.Assert(sha1Hash.Length == 20);
             Debug.Assert(sha256Hash.Length == 32);
 
             _sha1Hash = sha1Hash;
             _sha256Hash = sha256Hash;
-            _fileSize = fileSize;
-            _fileCreatedUtc = fileCreatedUtc;
-            _fileModifiedUtc = fileModifiedUtc;
         }
 
         public static HashedFile FromFile(FileInfo file)
@@ -66,10 +60,7 @@ namespace DirectoryHash
 
             return new HashedFile(
                 sha1Hash: sha1Algorithm.Hash.ToImmutableArray(),
-                sha256Hash: sha256Algorithm.Hash.ToImmutableArray(),
-                fileSize: file.Length,
-                fileCreatedUtc: file.CreationTimeUtc,
-                fileModifiedUtc: file.LastWriteTimeUtc);
+                sha256Hash: sha256Algorithm.Hash.ToImmutableArray());
         }
 
         public ImmutableArray<byte> Sha1Hash { get { return _sha1Hash; } }
