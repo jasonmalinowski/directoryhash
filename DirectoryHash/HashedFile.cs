@@ -66,6 +66,40 @@ namespace DirectoryHash
         public ImmutableArray<byte> Sha1Hash { get { return _sha1Hash; } }
         public ImmutableArray<byte> Sha256Hash { get { return _sha256Hash; } }
 
+        public static HashedFile ReadFrom(XmlReader reader)
+        {
+            if (!reader.IsStartElement("file"))
+            {
+                throw new Exception("Expected file element.");
+            }
+
+            var sha1Hash = ImmutableArray<byte>.Empty;
+            var sha256Hash = ImmutableArray<byte>.Empty;
+
+            reader.ReadToFollowing("hash");
+            ReadHash(reader, ref sha1Hash, ref sha256Hash);
+            ReadHash(reader, ref sha1Hash, ref sha256Hash);
+
+            return new HashedFile(sha1Hash, sha256Hash);
+        }
+
+        private static void ReadHash(XmlReader reader, ref ImmutableArray<byte> sha1Hash, ref ImmutableArray<byte> sha256Hash)
+        {
+            reader.MoveToAttribute("algorithm");
+            var algorithm = reader.Value;
+            reader.MoveToContent();
+            var hashString = reader.ReadElementContentAsString();
+
+            if (algorithm == "sha1")
+            {
+                sha1Hash = hashString.FromHexString();
+            }
+            else if (algorithm == "sha256")
+            {
+                sha256Hash = hashString.FromHexString();
+            }
+        }
+
         public void WriteTo(XmlWriter writer, string fileName)
         {
             writer.WriteStartElement("file");

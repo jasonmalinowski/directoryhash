@@ -18,6 +18,39 @@ namespace DirectoryHash
         public SortedDictionary<string, HashedDirectory> Directories { get { return _directories; } }
         public SortedDictionary<string, HashedFile> Files { get { return _files; } }
 
+        public static HashedDirectory ReadFrom(XmlReader reader)
+        {
+            if (!reader.IsStartElement(DirectoryElementLocalName))
+            {
+                throw new Exception("Expected directory element.");
+            }
+
+            var directory = new HashedDirectory();
+
+            if (reader.IsEmptyElement)
+            {
+                return directory;
+            }
+
+            while (reader.Read() && reader.NodeType != XmlNodeType.EndElement)
+            {
+                reader.MoveToAttribute("name");
+                var childName = reader.Value;
+                reader.MoveToElement();
+
+                if (reader.IsStartElement(DirectoryElementLocalName))
+                {
+                    directory.Directories.Add(childName, HashedDirectory.ReadFrom(reader));
+                }
+                else
+                {
+                    directory.Files.Add(childName, HashedFile.ReadFrom(reader));
+                }
+            }
+
+            return directory;
+        }
+
         public void WriteTo(XmlWriter writer)
         {
             writer.WriteStartElement(DirectoryElementLocalName);
@@ -119,5 +152,6 @@ namespace DirectoryHash
                 _files.Remove(unvisitedFile);
             }
         }
+
     }
 }

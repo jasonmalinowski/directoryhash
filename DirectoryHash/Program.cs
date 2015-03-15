@@ -25,6 +25,11 @@ namespace DirectoryHash
                     Recompute();
                     return 0;
 
+                case "update":
+
+                    Update();
+                    return 0;
+
                 default:
 
                     PrintUsage();
@@ -35,31 +40,41 @@ namespace DirectoryHash
         private static void PrintUsage()
         {
             Console.WriteLine("usage: directoryhash recompute");
+            Console.WriteLine("       directoryhash update");
         }
 
         private static void Recompute()
         {
-            var directory = new HashedDirectory();
-            var updatedTime = DateTime.UtcNow;
+            var hashesFile = HashesXmlFile.CreateNew();
 
             var directoryToHash = new DirectoryInfo(Environment.CurrentDirectory);
             var outputFile = new FileInfo(Path.Combine(directoryToHash.FullName, "Hashes.xml"));
-            
-            directory.RefreshFrom(
+
+            hashesFile.RootDirectory.RefreshFrom(
                 directoryToHash, 
                 shouldInclude: info => !info.IsHiddenAndSystem() && info.FullName != outputFile.FullName,
                 shouldReprocessFile: file => true,
                 reportDirectory: d => Console.WriteLine("Recomputing hashes of " + d.FullName + "..."));
 
-            var writerSettings = new XmlWriterSettings { Indent = true };
+            hashesFile.WriteTo(outputFile.FullName);
+        }
+        
+        private static void Update()
+        {
+            var directoryToHash = new DirectoryInfo(Environment.CurrentDirectory);
+            var outputFile = new FileInfo(Path.Combine(directoryToHash.FullName, "Hashes.xml"));
 
-            using (var xmlWriter = XmlWriter.Create(outputFile.FullName, writerSettings))
-            {
-                xmlWriter.WriteStartElement("hashes");
-                xmlWriter.WriteAttributeString("updateTime", updatedTime.ToString("O"));
-                directory.WriteTo(xmlWriter);
-                xmlWriter.WriteEndElement();
-            }
+            var hashesFile = HashesXmlFile.ReadFrom(outputFile.FullName);
+
+            hashesFile.TouchUpdateTime();
+
+            hashesFile.RootDirectory.RefreshFrom(
+                directoryToHash,
+                shouldInclude: info => !info.IsHiddenAndSystem() && info.FullName != outputFile.FullName,
+                shouldReprocessFile: file => file.CreationTimeUtc > hashesFile.UpdateTime || file.LastWriteTimeUtc > hashesFile.UpdateTime,
+                reportDirectory: d => Console.WriteLine("Updating hashes of " + d.FullName + "..."));
+
+            hashesFile.WriteTo(outputFile.FullName);
         }
     }
 }

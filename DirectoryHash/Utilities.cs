@@ -15,6 +15,18 @@ namespace DirectoryHash
             return bytes.Aggregate("", (s, b) => s + b.ToString("x2"));
         }
 
+        public static ImmutableArray<byte> FromHexString(this string hexString)
+        {
+            byte[] bytes = new byte[hexString.Length / 2];
+
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                 bytes[i] = byte.Parse(hexString.Substring(i * 2, 2), System.Globalization.NumberStyles.HexNumber);
+            }
+
+            return ImmutableArray.Create(bytes);
+        }
+
         public static bool IsHiddenAndSystem(this FileSystemInfo info)
         {
             return info.Attributes.HasFlag(FileAttributes.Hidden | FileAttributes.System);
