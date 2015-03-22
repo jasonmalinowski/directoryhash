@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Xml;
@@ -12,7 +13,7 @@ namespace DirectoryHash
     /// <summary>
     /// Stores the hashes and attributes of a file. Immutable.
     /// </summary>
-    internal sealed class HashedFile
+    internal sealed class HashedFile : IEquatable<HashedFile>
     {
         private readonly ImmutableArray<byte> _sha1Hash;
         private readonly ImmutableArray<byte> _sha256Hash;
@@ -116,6 +117,26 @@ namespace DirectoryHash
             writer.WriteEndElement();
 
             writer.WriteEndElement();
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as HashedFile);
+        }
+
+        public bool Equals(HashedFile other)
+        {
+            if (other == null)
+            {
+                return false;
+            }
+
+            return _sha1Hash.SequenceEqual(other._sha1Hash) && _sha256Hash.SequenceEqual(other._sha256Hash);
+        }
+
+        public override int GetHashCode()
+        {
+            return _sha1Hash[0] << 24 + _sha1Hash[1] << 16 + _sha1Hash[2] << 8 + _sha1Hash[3];
         }
     }
 }
