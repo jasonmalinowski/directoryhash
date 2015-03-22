@@ -77,5 +77,61 @@ namespace DirectoryHash
                 xmlWriter.WriteEndElement();
             }
         }
+
+        /// <summary>
+        /// Recursively enumerates all files in the directory, calling the appropriate function for files found.
+        /// </summary>
+        /// <param name="hashedFileAction">A function called with a file and it's file hashes, if the file hasn't been modified since
+        /// <see cref="UpdateTime" />.</param>
+        /// <param name="unhashedFileAction">A function called with a file if no valid hashes are available.</param>
+        public void EnumerateFiles(Action<FileInfo, HashedFile> hashedFileAction, Action<FileInfo> unhashedFileAction)
+        {
+            EnumerateFiles(_rootDirectory, _hashedDirectory, hashedFileAction, unhashedFileAction);
+        }
+
+        private void EnumerateFiles(DirectoryInfo directory, HashedDirectory hashedDirectory, Action<FileInfo, HashedFile> hashedFileAction, Action<FileInfo> unhashedFileAction)
+        {
+            foreach (var file in directory.GetFiles())
+            {
+                if (!file.IsHiddenAndSystem() && file.FullName != _hashesXmlFileName)
+                {
+                    HashedFile hashedFile;
+
+                    if (hashedDirectory != null && hashedDirectory.Files.TryGetValue(file.Name, out hashedFile))
+                    {
+                        // Is the hash actually valid?
+                        if (file.IsModifiedAfter(UpdateTime))
+                        {
+                            unhashedFileAction(file);
+                        }
+                        else
+                        {
+                            hashedFileAction(file, hashedFile);
+                        }
+                    }
+                    else
+                    {
+                        // The file hasn't been hashed at all
+                        unhashedFileAction(file);
+                    }
+                }
+            }
+
+            foreach (var childDirectory in directory.GetDirectories())
+            {
+                if (!childDirectory.IsHiddenAndSystem())
+                {
+                    HashedDirectory hashedChildDirectory = null;
+
+                    // If we don't have hashes at all for the child directory we'll just pass null through
+                    if (hashedDirectory != null)
+                    {
+                        hashedDirectory.Directories.TryGetValue(childDirectory.Name, out hashedChildDirectory);
+                    }
+
+                    EnumerateFiles(childDirectory, hashedChildDirectory, hashedFileAction, unhashedFileAction);
+                }
+            }
+        }
     }
 }

@@ -31,5 +31,25 @@ namespace DirectoryHash
         {
             return info.Attributes.HasFlag(FileAttributes.Hidden | FileAttributes.System);
         }
+
+        public static bool IsModifiedAfter(this FileInfo file, DateTime dateTime)
+        {
+            return file.CreationTimeUtc > dateTime || file.LastWriteTimeUtc > dateTime;
+        }
+
+        internal static void WriteColoredConsoleLine(ConsoleColor color, string format, params object[] args)
+        {
+            var originalColor = Console.ForegroundColor;
+            Console.ForegroundColor = color;
+
+            try
+            {
+                Console.WriteLine(format, args);
+            }
+            finally
+            {
+                Console.ForegroundColor = originalColor;
+            }
+        }
     }
 }
