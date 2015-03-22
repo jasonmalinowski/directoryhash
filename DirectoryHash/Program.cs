@@ -45,36 +45,32 @@ namespace DirectoryHash
 
         private static void Recompute()
         {
-            var hashesFile = HashesXmlFile.CreateNew();
-
             var directoryToHash = new DirectoryInfo(Environment.CurrentDirectory);
-            var outputFile = new FileInfo(Path.Combine(directoryToHash.FullName, "Hashes.xml"));
+            var hashesFile = HashesXmlFile.CreateNew(directoryToHash);
 
-            hashesFile.RootDirectory.RefreshFrom(
+            hashesFile.HashedDirectory.RefreshFrom(
                 directoryToHash, 
-                shouldInclude: info => !info.IsHiddenAndSystem() && info.FullName != outputFile.FullName,
+                shouldInclude: info => !info.IsHiddenAndSystem() && info.FullName != hashesFile.FullName,
                 shouldReprocessFile: file => true,
                 reportDirectory: d => Console.WriteLine("Recomputing hashes of " + d.FullName + "..."));
 
-            hashesFile.WriteTo(outputFile.FullName);
+            hashesFile.WriteToHashesXml();
         }
         
         private static void Update()
         {
             var directoryToHash = new DirectoryInfo(Environment.CurrentDirectory);
-            var outputFile = new FileInfo(Path.Combine(directoryToHash.FullName, "Hashes.xml"));
-
-            var hashesFile = HashesXmlFile.ReadFrom(outputFile.FullName);
+            var hashesFile = HashesXmlFile.ReadFrom(directoryToHash);
 
             hashesFile.TouchUpdateTime();
 
-            hashesFile.RootDirectory.RefreshFrom(
+            hashesFile.HashedDirectory.RefreshFrom(
                 directoryToHash,
-                shouldInclude: info => !info.IsHiddenAndSystem() && info.FullName != outputFile.FullName,
+                shouldInclude: info => !info.IsHiddenAndSystem() && info.FullName != hashesFile.FullName,
                 shouldReprocessFile: file => file.CreationTimeUtc > hashesFile.UpdateTime || file.LastWriteTimeUtc > hashesFile.UpdateTime,
                 reportDirectory: d => Console.WriteLine("Updating hashes of " + d.FullName + "..."));
 
-            hashesFile.WriteTo(outputFile.FullName);
+            hashesFile.WriteToHashesXml();
         }
     }
 }
