@@ -110,6 +110,8 @@ namespace DirectoryHash
 
                         if (!dryRun)
                         {
+                            // Files that are marked read-only can't be deleted by FileInfo.Delete()
+                            fileInfo.IsReadOnly = false;
                             fileInfo.Delete();
                         }
                     }
