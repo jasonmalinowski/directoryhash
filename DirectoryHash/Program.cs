@@ -99,6 +99,8 @@ namespace DirectoryHash
 
             var directoryToPurge = HashesXmlFile.ReadFrom(new DirectoryInfo(Environment.CurrentDirectory));
 
+            var potentiallyEmptyDirectories = new List<DirectoryInfo>();
+
             directoryToPurge.EnumerateFiles(
                 hashedFileAction: (fileInfo, hashedFile) =>
                 {
@@ -113,10 +115,30 @@ namespace DirectoryHash
                             // Files that are marked read-only can't be deleted by FileInfo.Delete()
                             fileInfo.IsReadOnly = false;
                             fileInfo.Delete();
+
+                            // Include the parent directory in a list of directories to look at later
+                            var lastDirectory = potentiallyEmptyDirectories.LastOrDefault();
+                            if (lastDirectory == null || lastDirectory.FullName != fileInfo.Directory.FullName)
+                            {
+                                potentiallyEmptyDirectories.Add(fileInfo.Directory);
+                            }
                         }
                     }
                 },
                 unhashedFileAction: fileInfo => Utilities.WriteColoredConsoleLine(ConsoleColor.Yellow, "Skipping {0} since it doesn't have an updated hash", fileInfo.FullName));
+
+            // Since we visited directories outermost-to-innermost, we should delete in the reverse order
+            potentiallyEmptyDirectories.Reverse();
+
+            foreach (var potentiallyEmptyDirectory in potentiallyEmptyDirectories)
+            {
+                if (!potentiallyEmptyDirectory.EnumerateFiles().Any() &&
+                    !potentiallyEmptyDirectory.EnumerateDirectories().Any())
+                {
+                    Console.WriteLine("Deleting empty directory {0}", potentiallyEmptyDirectory.FullName);
+                    potentiallyEmptyDirectory.Delete(recursive: false);
+                }
+            }
         }
     }
 }
