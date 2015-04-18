@@ -72,13 +72,14 @@ namespace DirectoryHash
         {
             var directoryToHash = new DirectoryInfo(Environment.CurrentDirectory);
             var hashesFile = HashesXmlFile.ReadFrom(directoryToHash);
+            var originalUpdateTime = hashesFile.UpdateTime;
 
             hashesFile.TouchUpdateTime();
 
             hashesFile.HashedDirectory.RefreshFrom(
                 directoryToHash,
                 shouldInclude: info => !info.IsHiddenAndSystem() && info.FullName != hashesFile.FullName,
-                shouldReprocessFile: file => file.IsModifiedAfter(hashesFile.UpdateTime),
+                shouldReprocessFile: file => file.IsModifiedAfter(originalUpdateTime),
                 reportDirectory: d => Console.WriteLine("Updating hashes of " + d.FullName + "..."));
 
             hashesFile.WriteToHashesXml();

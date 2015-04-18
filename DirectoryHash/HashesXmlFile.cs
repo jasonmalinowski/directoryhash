@@ -55,7 +55,7 @@ namespace DirectoryHash
                 xmlReader.ReadToDescendant("hashes");
 
                 xmlReader.MoveToAttribute("updateTime");
-                var updateTime = DateTime.ParseExact(xmlReader.Value, "O", CultureInfo.InvariantCulture);
+                var updateTime = DateTime.ParseExact(xmlReader.Value, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                 xmlReader.Read();
 
                 var directory = HashedDirectory.ReadFrom(xmlReader);
