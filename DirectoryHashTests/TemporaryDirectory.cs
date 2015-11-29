@@ -9,17 +9,15 @@ namespace DirectoryHash.Tests
 {
     internal sealed class TemporaryDirectory : IDisposable
     {
-        private readonly DirectoryInfo _directory;
-
         public TemporaryDirectory()
         {
-            _directory = new DirectoryInfo(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()));
-            _directory.Create();
+            Directory = new DirectoryInfo(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()));
+            Directory.Create();
         }
 
         public FileInfo CreateFileWithContent(string fileName, byte[] contents)
         {
-            var file = new FileInfo(Path.Combine(_directory.FullName, fileName));
+            var file = new FileInfo(Path.Combine(Directory.FullName, fileName));
 
             using (var stream = file.OpenWrite())
             {
@@ -29,9 +27,11 @@ namespace DirectoryHash.Tests
             return file;
         }
 
+        public DirectoryInfo Directory { get; }
+
         public void Dispose()
         {
-            _directory.Delete(recursive: true);
+            Directory.Delete(recursive: true);
         }
     }
 }
