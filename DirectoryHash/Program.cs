@@ -12,6 +12,11 @@ namespace DirectoryHash
     {
         public static int Main(string[] args)
         {
+            return MainCore(new DirectoryInfo(Environment.CurrentDirectory), args);
+        }
+
+        internal static int MainCore(DirectoryInfo currentDirectory, string[] args)
+        {
             if (args.Length == 0)
             {
                 PrintUsage();
@@ -24,12 +29,12 @@ namespace DirectoryHash
             {
                 case "recompute":
 
-                    Recompute();
+                    Recompute(currentDirectory);
                     return 0;
 
                 case "update":
 
-                    Update();
+                    Update(currentDirectory);
                     return 0;
 
                 case "purge":
@@ -37,7 +42,7 @@ namespace DirectoryHash
                     var dryRun = remainingArgs.Contains("--dry-run");
                     var directories = remainingArgs.Where(arg => arg != "--dry-run");
 
-                    Purge(directories, dryRun);
+                    Purge(currentDirectory, directories, dryRun);
                     return 0;
 
                 default:
@@ -54,9 +59,8 @@ namespace DirectoryHash
             Console.WriteLine("       directoryhash purge [--dry-run] directory [directory...]");
         }
 
-        private static void Recompute()
+        private static void Recompute(DirectoryInfo directoryToHash)
         {
-            var directoryToHash = new DirectoryInfo(Environment.CurrentDirectory);
             var hashesFile = HashesXmlFile.CreateNew(directoryToHash);
 
             hashesFile.HashedDirectory.RefreshFrom(
@@ -68,9 +72,8 @@ namespace DirectoryHash
             hashesFile.WriteToHashesXml();
         }
         
-        private static void Update()
+        private static void Update(DirectoryInfo directoryToHash)
         {
-            var directoryToHash = new DirectoryInfo(Environment.CurrentDirectory);
             var hashesFile = HashesXmlFile.ReadFrom(directoryToHash);
             var originalUpdateTime = hashesFile.UpdateTime;
 
@@ -85,7 +88,7 @@ namespace DirectoryHash
             hashesFile.WriteToHashesXml();
         }
 
-        private static void Purge(IEnumerable<string> directories, bool dryRun)
+        private static void Purge(DirectoryInfo directoryToPurge, IEnumerable<string> directories, bool dryRun)
         {
             var knownFiles = new Dictionary<HashedFile, string>();
 
@@ -98,11 +101,11 @@ namespace DirectoryHash
                     unhashedFileAction: fileInfo => Utilities.WriteColoredConsoleLine(ConsoleColor.Yellow, "File {0} doesn't have an updated hash and will be ignored", fileInfo.FullName));
             }
 
-            var directoryToPurge = HashesXmlFile.ReadFrom(new DirectoryInfo(Environment.CurrentDirectory));
+            var directoryToPurgeHashes = HashesXmlFile.ReadFrom(directoryToPurge);
 
             var potentiallyEmptyDirectories = new List<DirectoryInfo>();
 
-            directoryToPurge.EnumerateFiles(
+            directoryToPurgeHashes.EnumerateFiles(
                 hashedFileAction: (fileInfo, hashedFile) =>
                 {
                     string matchingFile;
