@@ -24,6 +24,20 @@ namespace DirectoryHash.Tests
         }
 
         [Fact]
+        public void RecomputeUpdatesTimeStamp()
+        {
+            using (var temporaryDirectory = new TemporaryDirectory())
+            {
+                var timeRange = DateTimeRange.CreateSurrounding(
+                    () => temporaryDirectory.Run("recompute"));
+
+                var hashes = HashesXmlFile.ReadFrom(temporaryDirectory.Directory);
+
+                timeRange.AssertContains(hashes.UpdateTime);
+            }
+        }
+
+        [Fact]
         public void RecomputeWithFile()
         {
             using (var temporaryDirectory = new TemporaryDirectory())
