@@ -61,6 +61,7 @@
     <Compile Include="DateTimeRange.cs" />
     <Compile Include="HashedFileTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PurgeTests.cs" />
     <Compile Include="RecomputeTests.cs" />
     <Compile Include="TemporaryDirectory.cs" />
     <Compile Include="TestUtilities.cs" />
