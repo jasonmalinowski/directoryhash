@@ -152,6 +152,5 @@ namespace DirectoryHash
                 _files.Remove(unvisitedFile);
             }
         }
-
     }
 }
