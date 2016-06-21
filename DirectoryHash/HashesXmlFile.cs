@@ -84,16 +84,16 @@ namespace DirectoryHash
         /// <param name="hashedFileAction">A function called with a file and it's file hashes, if the file hasn't been modified since
         /// <see cref="UpdateTime" />.</param>
         /// <param name="unhashedFileAction">A function called with a file if no valid hashes are available.</param>
-        public void EnumerateFiles(Action<FileInfo, HashedFile> hashedFileAction, Action<FileInfo> unhashedFileAction)
+        public void EnumerateFiles(Predicate<FileSystemInfo> shouldInclude, Action<FileInfo, HashedFile> hashedFileAction, Action<FileInfo> unhashedFileAction)
         {
-            EnumerateFiles(_rootDirectory, _hashedDirectory, hashedFileAction, unhashedFileAction);
+            EnumerateFiles(_rootDirectory, _hashedDirectory, shouldInclude, hashedFileAction, unhashedFileAction);
         }
 
-        private void EnumerateFiles(DirectoryInfo directory, HashedDirectory hashedDirectory, Action<FileInfo, HashedFile> hashedFileAction, Action<FileInfo> unhashedFileAction)
+        private void EnumerateFiles(DirectoryInfo directory, HashedDirectory hashedDirectory, Predicate<FileSystemInfo> shouldInclude, Action<FileInfo, HashedFile> hashedFileAction, Action<FileInfo> unhashedFileAction)
         {
             foreach (var file in directory.GetFiles())
             {
-                if (!file.IsHiddenAndSystem() && file.FullName != _hashesXmlFileName)
+                if (shouldInclude(file))
                 {
                     HashedFile hashedFile;
 
@@ -119,7 +119,7 @@ namespace DirectoryHash
 
             foreach (var childDirectory in directory.GetDirectories())
             {
-                if (!childDirectory.IsHiddenAndSystem())
+                if (shouldInclude(childDirectory))
                 {
                     HashedDirectory hashedChildDirectory = null;
 
@@ -129,7 +129,7 @@ namespace DirectoryHash
                         hashedDirectory.Directories.TryGetValue(childDirectory.Name, out hashedChildDirectory);
                     }
 
-                    EnumerateFiles(childDirectory, hashedChildDirectory, hashedFileAction, unhashedFileAction);
+                    EnumerateFiles(childDirectory, hashedChildDirectory, shouldInclude, hashedFileAction, unhashedFileAction);
                 }
             }
         }

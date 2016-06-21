@@ -49,5 +49,19 @@ namespace DirectoryHash.Tests
 
             Assert.Equal(rehashedFile, hashes.HashedDirectory.Files["Fox"]);
         }
+
+        [Fact]
+        public void RecomputeRespectsDirectoryExclusion()
+        {
+            var file = temporaryDirectory.CreateFileWithContent("Directory\\File", Encoding.ASCII.GetBytes("The quick brown fox jumps over the lazy dog."));
+            temporaryDirectory.CreateFileWithContent("Hashes.config", Encoding.UTF8.GetBytes("<configuration><exclude><directories matching=\"Direct*\" /></exclude></configuration>"));
+            temporaryDirectory.Run("recompute");
+
+            var hashes = HashesXmlFile.ReadFrom(temporaryDirectory.Directory);
+
+            Assert.Empty(hashes.HashedDirectory.Directories);
+            var configurationFile = Assert.Single(hashes.HashedDirectory.Files.Keys);
+            Assert.Equal("Hashes.config", configurationFile);
+        }
     }
 }

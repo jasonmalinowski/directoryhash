@@ -62,26 +62,28 @@ namespace DirectoryHash
         private static void Recompute(DirectoryInfo directoryToHash)
         {
             var hashesFile = HashesXmlFile.CreateNew(directoryToHash);
+            var configuration = Configuration.ReadFrom(directoryToHash);
 
             hashesFile.HashedDirectory.RefreshFrom(
-                directoryToHash, 
-                shouldInclude: info => !info.IsHiddenAndSystem() && info.FullName != hashesFile.FullName,
+                directoryToHash,
+                shouldInclude: info => ShouldInclude(info, hashesFile, configuration),
                 shouldReprocessFile: file => true,
                 reportDirectory: d => Console.WriteLine("Recomputing hashes of " + d.FullName + "..."));
 
             hashesFile.WriteToHashesXml();
         }
-        
+
         private static void Update(DirectoryInfo directoryToHash)
         {
             var hashesFile = HashesXmlFile.ReadFrom(directoryToHash);
+            var configuration = Configuration.ReadFrom(directoryToHash);
             var originalUpdateTime = hashesFile.UpdateTime;
 
             hashesFile.TouchUpdateTime();
 
             hashesFile.HashedDirectory.RefreshFrom(
                 directoryToHash,
-                shouldInclude: info => !info.IsHiddenAndSystem() && info.FullName != hashesFile.FullName,
+                shouldInclude: info => ShouldInclude(info, hashesFile, configuration),
                 shouldReprocessFile: file => file.IsModifiedAfter(originalUpdateTime),
                 reportDirectory: d => Console.WriteLine("Updating hashes of " + d.FullName + "..."));
 
@@ -95,17 +97,21 @@ namespace DirectoryHash
             foreach (var directory in directories)
             {
                 var hashesFile = HashesXmlFile.ReadFrom(new DirectoryInfo(directory));
+                var configuration = Configuration.ReadFrom(new DirectoryInfo(directory));
 
                 hashesFile.EnumerateFiles(
+                    shouldInclude: info => ShouldInclude(info, hashesFile, configuration),
                     hashedFileAction: (fileInfo, hashedFile) => knownFiles[hashedFile] = fileInfo.FullName,
                     unhashedFileAction: fileInfo => Utilities.WriteColoredConsoleLine(ConsoleColor.Yellow, "File {0} doesn't have an updated hash and will be ignored", fileInfo.FullName));
             }
 
             var directoryToPurgeHashes = HashesXmlFile.ReadFrom(directoryToPurge);
+            var directoryToPurgeConfiguration = Configuration.ReadFrom(directoryToPurge);
 
             var potentiallyEmptyDirectories = new List<DirectoryInfo>();
 
             directoryToPurgeHashes.EnumerateFiles(
+                shouldInclude: info => ShouldInclude(info, directoryToPurgeHashes, directoryToPurgeConfiguration),
                 hashedFileAction: (fileInfo, hashedFile) =>
                 {
                     string matchingFile;
@@ -143,6 +149,11 @@ namespace DirectoryHash
                     potentiallyEmptyDirectory.Delete(recursive: false);
                 }
             }
+        }
+
+        private static bool ShouldInclude(FileSystemInfo info, HashesXmlFile hashesFile, Configuration configuration)
+        {
+            return !info.IsHiddenAndSystem() && info.FullName != hashesFile.FullName && configuration.ShouldInclude(info);
         }
     }
 }

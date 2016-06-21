@@ -18,6 +18,7 @@ namespace DirectoryHash.Tests
         public FileInfo CreateFileWithContent(string fileName, byte[] contents)
         {
             var file = new FileInfo(Path.Combine(Directory.FullName, fileName));
+            file.Directory.Create();
 
             using (var stream = file.OpenWrite())
             {
