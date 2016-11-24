@@ -108,7 +108,7 @@ namespace DirectoryHash
             var directoryToPurgeHashes = HashesXmlFile.ReadFrom(directoryToPurge);
             var directoryToPurgeConfiguration = Configuration.ReadFrom(directoryToPurge);
 
-            var potentiallyEmptyDirectories = new List<DirectoryInfo>();
+            var directoriesWithDeletedFiles = new HashSet<string>();
 
             directoryToPurgeHashes.EnumerateFiles(
                 shouldInclude: info => ShouldInclude(info, directoryToPurgeHashes, directoryToPurgeConfiguration),
@@ -126,29 +126,51 @@ namespace DirectoryHash
                             fileInfo.IsReadOnly = false;
                             fileInfo.Delete();
 
-                            // Include the parent directory in a list of directories to look at later
-                            var lastDirectory = potentiallyEmptyDirectories.LastOrDefault();
-                            if (lastDirectory == null || lastDirectory.FullName != fileInfo.Directory.FullName)
-                            {
-                                potentiallyEmptyDirectories.Add(fileInfo.Directory);
-                            }
+                            directoriesWithDeletedFiles.Add(fileInfo.Directory.FullName);
                         }
                     }
                 },
                 unhashedFileAction: fileInfo => Utilities.WriteColoredConsoleLine(ConsoleColor.Yellow, "Skipping {0} since it doesn't have an updated hash", fileInfo.FullName));
 
-            // Since we visited directories outermost-to-innermost, we should delete in the reverse order
-            potentiallyEmptyDirectories.Reverse();
-
-            foreach (var potentiallyEmptyDirectory in potentiallyEmptyDirectories)
+            // Try cleaning up child directories. We don't call this on the root since we never want to try deleting that
+            foreach (var childDirectory in directoryToPurge.GetDirectories())
             {
-                if (!potentiallyEmptyDirectory.EnumerateFiles().Any() &&
-                    !potentiallyEmptyDirectory.EnumerateDirectories().Any())
+                TryCleanupEmptyDirectory(childDirectory, directoriesWithDeletedFiles);
+            }
+        }
+
+        private static bool TryCleanupEmptyDirectory(DirectoryInfo directory, HashSet<string> potentiallyEmptyDirectories)
+        {
+            bool cleanedUpAtLeastOneChildDirectory = false;
+
+            // First, cleanup any children
+            foreach (var childDirectory in directory.GetDirectories())
+            {
+                if (TryCleanupEmptyDirectory(childDirectory, potentiallyEmptyDirectories))
                 {
-                    Console.WriteLine("Deleting empty directory {0}", potentiallyEmptyDirectory.FullName);
-                    potentiallyEmptyDirectory.Delete(recursive: false);
+                    // Child couldn't be cleaned up, so nor can we
+                    return false;
+                }
+                else
+                {
+                    cleanedUpAtLeastOneChildDirectory = true;
                 }
             }
+
+            // If it's not empty, definitely we can't do anything
+            if (directory.EnumerateFileSystemInfos().Any())
+            {
+                return false;
+            }
+
+            // We know we have an empty directory. We should delete if either it's because we
+            // deleted a file earlier, or deleted a directory now
+            if (cleanedUpAtLeastOneChildDirectory || potentiallyEmptyDirectories.Contains(directory.FullName))
+            {
+                directory.Delete(recursive: false);
+            }
+
+            return false;
         }
 
         private static bool ShouldInclude(FileSystemInfo info, HashesXmlFile hashesFile, Configuration configuration)
