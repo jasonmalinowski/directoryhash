@@ -63,5 +63,17 @@ namespace DirectoryHash.Tests
             var configurationFile = Assert.Single(hashes.HashedDirectory.Files.Keys);
             Assert.Equal("Hashes.config", configurationFile);
         }
+
+        [Fact]
+        public void RecomputeRespectsFileExclusion()
+        {
+            var file = temporaryDirectory.CreateFileWithContent("Directory\\File.txt", Encoding.ASCII.GetBytes("The quick brown fox jumps over the lazy dog."));
+            temporaryDirectory.CreateFileWithContent("Hashes.config", Encoding.UTF8.GetBytes("<configuration><exclude><files matching=\"*.txt\" /></exclude></configuration>"));
+            temporaryDirectory.Run("recompute");
+
+            var hashes = HashesXmlFile.ReadFrom(temporaryDirectory.Directory);
+
+            Assert.Empty(hashes.HashedDirectory.Directories.Single().Value.Files);
+        }
     }
 }

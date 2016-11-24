@@ -12,10 +12,12 @@ namespace DirectoryHash
     internal sealed class Configuration
     {
         public ImmutableArray<Pattern> IgnoredDirectories { get; }
+        public ImmutableArray<Pattern> IgnoredFiles { get; }
 
-        private Configuration(ImmutableArray<Pattern> ignoredDirectories)
+        private Configuration(ImmutableArray<Pattern> ignoredDirectories, ImmutableArray<Pattern> ignoredFiles)
         {
             IgnoredDirectories = ignoredDirectories;
+            IgnoredFiles = ignoredFiles;
         }
 
         public static Configuration ReadFrom(DirectoryInfo directory)
@@ -24,10 +26,13 @@ namespace DirectoryHash
 
             if (!File.Exists(configurationFileName))
             {
-                return new Configuration(ignoredDirectories: ImmutableArray<Pattern>.Empty);
+                return new Configuration(
+                    ignoredDirectories: ImmutableArray<Pattern>.Empty,
+                    ignoredFiles: ImmutableArray<Pattern>.Empty);
             }
 
             var ignoredDirectories = ImmutableArray<Pattern>.Empty.ToBuilder();
+            var ignoredFiles = ImmutableArray<Pattern>.Empty.ToBuilder();
 
             using (var xmlReader = XmlReader.Create(configurationFileName))
             {
@@ -40,10 +45,15 @@ namespace DirectoryHash
                         xmlReader.MoveToAttribute("matching");
                         ignoredDirectories.Add(new Pattern(xmlReader.Value));
                     }
+                    else if (xmlReader.IsStartElement("files"))
+                    {
+                        xmlReader.MoveToAttribute("matching");
+                        ignoredFiles.Add(new Pattern(xmlReader.Value));
+                    }
                 }
             }
 
-            return new Configuration(ignoredDirectories.ToImmutable());
+            return new Configuration(ignoredDirectories.ToImmutable(), ignoredFiles.ToImmutable());
         }
 
         /// <summary>
@@ -54,6 +64,10 @@ namespace DirectoryHash
             if (info is DirectoryInfo)
             {
                 return !IgnoredDirectories.Any(p => p.NameMatchesPattern(info.Name));
+            }
+            else if (info is FileInfo)
+            {
+                return !IgnoredFiles.Any(p => p.NameMatchesPattern(info.Name));
             }
 
             return true;
