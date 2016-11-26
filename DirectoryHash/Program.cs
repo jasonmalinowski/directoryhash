@@ -132,21 +132,30 @@ namespace DirectoryHash
                 },
                 unhashedFileAction: fileInfo => Utilities.WriteColoredConsoleLine(ConsoleColor.Yellow, "Skipping {0} since it doesn't have an updated hash", fileInfo.FullName));
 
-            // Try cleaning up child directories. We don't call this on the root since we never want to try deleting that
-            foreach (var childDirectory in directoryToPurge.GetDirectories())
+            if (!dryRun)
             {
-                TryCleanupEmptyDirectory(childDirectory, directoriesWithDeletedFiles);
+                // Try cleaning up child directories. We don't call this on the root since we never want to try deleting that
+                foreach (var childDirectory in directoryToPurge.GetDirectories())
+                {
+                    TryCleanupEmptyDirectory(childDirectory, directoryToPurgeConfiguration, directoriesWithDeletedFiles);
+                }
             }
         }
 
-        private static bool TryCleanupEmptyDirectory(DirectoryInfo directory, HashSet<string> potentiallyEmptyDirectories)
+        private static bool TryCleanupEmptyDirectory(DirectoryInfo directory, Configuration configuration, HashSet<string> potentiallyEmptyDirectories)
         {
+            // If we're ignoring it entirely, don't even traverse
+            if (!ShouldInclude(directory, hashesFile: null, configuration: configuration))
+            {
+                return false;
+            }
+
             bool cleanedUpAtLeastOneChildDirectory = false;
 
             // First, cleanup any children
             foreach (var childDirectory in directory.GetDirectories())
             {
-                if (TryCleanupEmptyDirectory(childDirectory, potentiallyEmptyDirectories))
+                if (TryCleanupEmptyDirectory(childDirectory, configuration, potentiallyEmptyDirectories))
                 {
                     // Child couldn't be cleaned up, so nor can we
                     return false;
@@ -175,7 +184,7 @@ namespace DirectoryHash
 
         private static bool ShouldInclude(FileSystemInfo info, HashesXmlFile hashesFile, Configuration configuration)
         {
-            return !info.IsHiddenAndSystem() && info.FullName != hashesFile.FullName && configuration.ShouldInclude(info);
+            return !info.IsHiddenAndSystem() && info.FullName != hashesFile?.FullName && configuration.ShouldInclude(info);
         }
     }
 }
